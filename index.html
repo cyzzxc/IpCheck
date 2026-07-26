@@ -173,7 +173,7 @@
             padding: 10px 14px; 
             position: absolute;
             z-index: 10;
-            bottom: 105%;
+            top: 105%;
             left: 50%;
             opacity: 0;
             transform: translate(-50%, 8px); 
@@ -186,12 +186,12 @@
         .tooltip::after { 
             content: "";
             position: absolute;
-            top: 100%;
+            bottom: 100%;
             left: 50%;
             margin-left: -6px; 
             border-width: 6px;
             border-style: solid;
-            border-color: rgba(26, 26, 26, 0.95) transparent transparent transparent;
+            border-color: transparent transparent rgba(26, 26, 26, 0.95) transparent;
         }
 
         .card-container:hover .tooltip {
@@ -378,17 +378,7 @@
 		.status-text-error {
 		  color: #ff0000;
 		  transition: color .18s ease;
-		}
-        .footer {
-            text-align: center;
-            margin-top: 25px;
-			font-size: 0.85em;
-            color: #999;
         }
-		.footer a{
-			font-size: 0.85em;
-            color: #999;
-		 }
         
 		@media (max-width: 640px) {
 			.title-text {
@@ -422,9 +412,7 @@
             <h3>国内 IPv4</h3>
             <div id="domestic-ipv4" class="ip-grid">
 			<div class="card-container">
-			
                 <div class="loading">正在加载...</div>
-          
 			</div>
 			</div>
         </div>
@@ -433,55 +421,23 @@
             <h3>国际 IPv4</h3>
             <div id="global-ipv4" class="ip-grid">
 			<div class="card-container">
-			
                 <div class="loading">正在加载...</div>
-          
-			</div>
-			</div>
-        </div>
-        
-        <div class="ip-category-wrapper">
-            <h3>国内 IPv6</h3>
-            <div id="domestic-ipv6" class="ip-grid">
-			<div class="card-container">
-			
-                <div class="loading">正在加载...</div>
-            
-			</div>
-			</div>
-        </div>
-
-        <div class="ip-category-wrapper">
-            <h3>国际 IPv6</h3>
-            <div id="global-ipv6" class="ip-grid">
-			<div class="card-container">
-			
-                <div class="loading">正在加载...</div>
-            
 			</div>
 			</div>
         </div>
     </div>
 	 
 
-<div class="footer">
-    Copyright © 2025 www.ip33.cn <a href="https://github.com/CyangHH/IpCheck" title="关于本站"  target="_blank">关于本站</a>
-</div>
-
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const ipApis = [
-        { name: 'Cyang IPDB', url: 'https://v4.cyang.net.cn/check/', type: 'json', isDomestic: true, protocol: 'v4' },
-        { name: 'Cyang IPDB', url: 'https://v6.cyang.net.cn/check/', type: 'json', isDomestic: true, protocol: 'v6' },
-        { name: 'Cyang IPDB', url: 'https://v4.cyang.net/check/', type: 'json', protocol: 'v4' },
-        { name: 'Cyang IPDB', url: 'https://v6.cyang.net/check/', type: 'json', protocol: 'v6' },
+        { url: 'https://ipv4.netart.cn/', who: 'domestic' },
+        { url: 'https://ipinfo.io/json', who: 'global' },
     ];
 
     const containers = {
-        domesticV4: document.getElementById('domestic-ipv4'),
-        domesticV6: document.getElementById('domestic-ipv6'),
-        globalV4: document.getElementById('global-ipv4'),
-        globalV6: document.getElementById('global-ipv6')
+        domestic: document.getElementById('domestic-ipv4'),
+        global: document.getElementById('global-ipv4'),
     };
 	const sites = [
       { id: 'baidu',   name: 'Baidu',    url: 'https://www.baidu.com/favicon.ico' },
@@ -492,7 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const TIMEOUT = 6000;
     const gridEl = document.getElementById('sites-grid');
-    const state = {};
     function clearContainer(container) {
         container.innerHTML = `<div class="card-container"><div class="loading">正在加载...</div></div>`;
     }
@@ -503,57 +458,39 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingElement.remove();
         }
     }
-	function delLast(str,target) {
-	  let reg =new RegExp(`${target}(?=([^${target}]*)$)`)
-	  return str.replace(reg,'')
-	}
+    // ponytail: parse both netart (domestic) and ipinfo.io (global) formats
     async function fetchIp(api) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
-        let ip = 'N/A', country = 'N/A', region = 'N/A', city = 'N/A', org = 'N/A' , asn = 'N/A';
 
         try {
-            let data;
             const response = await fetch(api.url, { cache: 'no-store', signal: controller.signal });
             if (!response.ok) throw new Error('Network response was not ok');
-            data = await (api.type === 'text' ? response.text() : response.json());
-			ip = data.ip ;
-            country = data.country.name || 'N/A'; 
-			if(country.includes('香港')||country.includes('澳门')||country.includes('台湾')){
-				
-				region=country.replace("中国", "");
-				country="中国";
-			}
-			if(data.regions){
-				region=data.regions.length > 0 ? data.regions[0] :'N/A'; 
-				region=delLast(region,'省');
-				city = data.regions.length > 1 ? data.regions[data.regions.length-1] : 'N/A'; 
-				city=delLast(city,'市');
-				city=delLast(city,'县');
-			}
-			//org =  data.as.info ? 'AS'+data.as.number+' '+data.as.info : 'AS'+data.as.number+' '+data.as.name || 'N/A';  
-			if(data.as)
-			{
-				asn = data.as.number ? data.as.number+'' : 'N/A';  
-				org =  data.as.info || data.as.name || 'N/A';  
-			}			
+            const data = await response.json();
+            const ip = data.ip || 'N/A';
             const actualType = ip.includes(':') ? 'v6' : 'v4';
-            if (api.protocol && api.protocol !== actualType) {
-                 throw new Error(`Protocol mismatch: Expected ${api.protocol}, got ${actualType}`);
-            }
-            const isDomestic = api.isDomestic || (country && (!country.includes('香港') && !country.includes('澳门') && !country.includes('台湾')) && (country.includes('中国') || country.includes('China') || country.includes('CN')));
+            let country, region, city, area, asn, org;
 
-            return { 
-                api, 
-                ip, 
-                country: country || 'N/A', 
-                region: region || 'N/A', 
-                city: city || 'N/A', 
-                org: org || 'N/A', 
-				asn: asn || 'N/A',
-                type: actualType,
-                isDomestic 
-            };
+            if (api.who === 'global') {
+                // ipinfo.io format
+                country = data.country || 'N/A';
+                region = data.region || 'N/A';
+                city = data.city || 'N/A';
+                area = 'N/A';
+                asn = 'N/A';
+                org = data.org || 'N/A';
+            } else {
+                // netart.cn format
+                country = (data.country && data.country.name) || 'N/A';
+                region = data.subdivision || 'N/A';
+                city = data.city || 'N/A';
+                area = data.area || 'N/A';
+                asn = (data.as && data.as.number) ? String(data.as.number) : 'N/A';
+                org = (data.as && (data.as.info || data.as.name)) || 'N/A';
+            }
+
+            clearTimeout(timeoutId);
+            return { ip, country, region, city, area, asn, org, type: actualType };
 
         } catch (error) {
             clearTimeout(timeoutId);
@@ -563,32 +500,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderIpCard(result, container) {
         const card = document.createElement('div');
         card.className = 'card-container';
-        let geoText = result.country;
-        if (result.region && result.region !== 'N/A' && result.country !== result.region) {
-            geoText = result.region; 
+        const geoParts = [result.region, result.city, result.area].filter(v => v && v !== 'N/A');
+        let geoText = geoParts.join(' ') || 'N/A';
+        // ponytail: prefix country for non-CN results
+        if (result.country && result.country !== 'N/A' && !result.country.includes('中国') && !result.country.includes('China')) {
+            geoText = result.country + ' ' + geoText;
         }
-        if (result.city && result.city !== 'N/A' && result.city !== result.region) {
-            geoText += ' ' + result.city;
-        }
-        if (!result.isDomestic && result.country && result.country !== 'N/A' )  {
-			if(result.city !== 'N/A' ||  result.region !== 'N/A')
-			{
-				geoText = result.country + (geoText.trim() ? ' ' + geoText.trim() : '');
-			}
 
-        } else if (result.isDomestic) {
-            geoText = (result.region && result.region !== 'N/A' ? result.region : '') +
-                      (result.city && result.city !== 'N/A' ? ' ' + result.city : '');
-        }
-        geoText = geoText.trim() || '地理信息未知';
-		//geoText =geoText.replace("省", "");
-		//geoText =geoText.replace("中国", "");
         const tooltipDetails = [
             { label: '国家', value: result.country },
             { label: '省份', value: result.region },
             { label: '城市', value: result.city },
-			{ label: 'ASN', value: result.asn },
-			{ label: '归属', value: result.org }
+            { label: '区县', value: result.area },
+            { label: 'ASN', value: result.asn },
+            { label: '归属', value: result.org }
         ].filter(item => item.value && item.value !== 'N/A' && item.value.trim() !== '')
          .map(item => `<p><strong>${item.label}:</strong> <span>${item.value}</span></p>`)
          .join('');
@@ -608,43 +533,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
+    // ponytail: domestic → netart, global → ipinfo.io
     async function checkip(apis) {
         Object.values(containers).forEach(clearContainer);
-        const groups = {
-            domesticV4: apis.filter(a => a.isDomestic && a.protocol === 'v4').map(a => fetchIp(a)),
-            globalV4: apis.filter(a => !a.isDomestic && a.protocol === 'v4').map(a => fetchIp(a)),
-            domesticV6: apis.filter(a => a.isDomestic && a.protocol === 'v6').map(a => fetchIp(a)),
-            globalV6: apis.filter(a => !a.isDomestic && a.protocol === 'v6').map(a => fetchIp(a)),
-        };
-        for (const key of Object.keys(groups)) {
-            const container = containers[key];
-            const promises = groups[key];
-
-            if (promises.length === 0) {
-                 const protocol = key.includes('V4') ? 'IPv4' : 'IPv6';
-                 const location = key.includes('domestic') ? '国内' : '国际';
-                 container.innerHTML = `<div class="card-container"><div class="loading">暂无 ${location} ${protocol} API。</div></div>`;
-                 continue;
-            }
-
+        await Promise.allSettled(apis.map(async (api) => {
+            const container = containers[api.who];
             try {
-                const fastestResult = await Promise.race(promises.map(p => p.then(res => {
-                    if (res) return res;
-                    throw new Error('API failed or returned null');
-                })));
-
-                if (fastestResult) {
+                const result = await fetchIp(api);
+                if (result) {
                     clearLoading(container);
-                    renderIpCard(fastestResult, container);
+                    renderIpCard(result, container);
                 } else {
-                    throw new Error('All APIs failed for this group');
+                    throw new Error('Failed');
                 }
-            } catch (error) {
-                const protocol = key.includes('V4') ? 'IPv4' : 'IPv6';
-                const location = key.includes('domestic') ? '国内' : '国际';
-                container.innerHTML = `<div class="card-container"><div class="loading">您可能没有${location}${protocol}  <a href="https://github.com/CyangHH/IpCheck/issues/new" title="该数据有问题?" target="_blank">*反馈</a></div></div>`; 
+            } catch (e) {
+                const label = api.who === 'domestic' ? '国内 IPv4' : '国际 IPv4';
+                container.innerHTML = `<div class="card-container"><div class="loading">您可能没有${label} <a href="https://github.com/CyangHH/IpCheck/issues/new" title="该数据有问题?" target="_blank">*反馈</a></div></div>`;
             }
-        }
+        }));
     }
 	 function speedtest() {
 			gridEl.innerHTML = '';
